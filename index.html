@@ -53,9 +53,9 @@
     /* =========================================================
        設定：ここにSupabaseの情報を貼り付けてください（★3か所）
        ========================================================= */
-    const SUPABASE_URL      = "";   // ←★ Project URL（例 https://xxxx.supabase.co）
-    const SUPABASE_ANON_KEY = "";   // ←★ anon public key
-    const FACILITY_NAME     = "ホップケア";  // 施設名（自由に変更）
+    const SUPABASE_URL      = "https://mdpozsrzrrdmigeayzrl.supabase.co";   // ←★ Project URL（例 https://xxxx.supabase.co）
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1kcG96c3J6cnJkbWlnZWF5enJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5NTc5NTksImV4cCI6MjA5NTUzMzk1OX0.HxGlxpHDmq8e8RNcFqymm-QHfRQ8jVDZ6SlzsjYZqU0";   // ←★ anon public key
+    const FACILITY_NAME     = "介護施設";  // 施設名（自由に変更）
 
     const isConfigured = SUPABASE_URL.startsWith("http") && SUPABASE_ANON_KEY.length > 20;
     const sb = isConfigured ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
