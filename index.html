@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>+ホップケア — 介護記録</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@unocss/runtime@0.59.4/uno.global.js"></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --cream:#FAF7F0; --cream-2:#F1EADB; --paper:#FFFFFF;
+      --sage:#7C8B6B; --sage-dark:#4E5C42; --sage-soft:#EAEFE1;
+      --coral:#C8552F; --amber:#C99A3B;
+      --ink:#2C2820; --ink-soft:#6E665A; --line:#E7E0D1;
+      --shadow-sm: 0 1px 2px rgba(46,42,36,.05);
+      --shadow: 0 2px 6px rgba(46,42,36,.05), 0 12px 28px rgba(46,42,36,.07);
+      --radius:20px;
+    }
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0; color: var(--ink); font-size: 16px; line-height: 1.65;
+      font-family: 'Noto Sans JP', sans-serif;
+      background: radial-gradient(1100px 520px at 82% -8%, #FFFEFB, var(--cream)) fixed;
+    }
+    .font-display { font-family: 'Zen Kaku Gothic New', sans-serif; font-weight: 700; letter-spacing: .01em; }
+    input, select, textarea { font-family: inherit; font-size: 16px; }
+
+    .card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+
+    .label { display:block; font-size: 13px; font-weight: 700; color: var(--ink-soft); margin-bottom: 6px; }
+    .field {
+      width: 100%; min-height: 50px; padding: 12px 14px; font-size: 16px;
+      border: 1.5px solid var(--line); border-radius: 13px; background: var(--paper); color: var(--ink);
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .field:focus { outline: none; border-color: var(--sage); box-shadow: 0 0 0 4px var(--sage-soft); }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      min-height: 48px; padding: 0 20px; border: none; border-radius: 14px;
+      font-size: 15px; font-weight: 700; cursor: pointer; white-space: nowrap;
+      transition: transform .08s ease, box-shadow .15s ease, background .15s ease;
+    }
+    .btn:active { transform: translateY(1px); }
+    .btn-primary { background: var(--sage-dark); color: #fff; box-shadow: 0 5px 16px rgba(78,92,66,.28); }
+    .btn-primary:hover { background: #41503A; }
+    .btn-primary:disabled { opacity: .6; box-shadow: none; }
+    .btn-ghost { background: var(--paper); color: var(--ink); border: 1.5px solid var(--line); }
+    .btn-ghost:hover { background: var(--cream-2); }
+    .btn-sm { min-height: 38px; padding: 0 13px; font-size: 13px; border-radius: 11px; }
+
+    .badge { display:inline-flex; align-items:center; padding: 3px 11px; border-radius: 999px; font-size: 12px; font-weight: 800; letter-spacing:.02em; }
+    .chip { display:inline-flex; align-items:center; padding: 4px 11px; border-radius: 999px; font-size: 13px; font-weight: 700;
+            background: var(--sage-soft); color: var(--sage-dark); }
+
+    .nav-tab {
+      display:inline-flex; align-items:center; gap:6px; min-height:42px; padding:0 15px;
+      border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; border: none; background: transparent; color: var(--ink-soft);
+      transition: background .15s, color .15s;
+    }
+    .nav-tab:hover { background: var(--cream-2); }
+    .nav-tab.active { background: var(--sage-dark); color: #fff; }
+
+    .res-card {
+      background: var(--paper); border: 1px solid var(--line); border-radius: 18px; padding: 18px;
+      text-align: left; cursor: pointer; box-shadow: var(--shadow-sm);
+      transition: transform .12s ease, box-shadow .15s ease, border-color .15s;
+      display:flex; gap:14px; align-items:center; width:100%;
+    }
+    .res-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); border-color: var(--sage-light, #cdd6bd); }
+
+    .rec-card { background: var(--paper); border: 1px solid var(--line); border-left-width: 6px; border-radius: 16px; padding: 16px 18px; box-shadow: var(--shadow-sm); }
+
+    .toggle-share { display:inline-flex; align-items:center; gap:6px; min-height:34px; padding:0 12px; border-radius:999px; font-size:13px; font-weight:700; cursor:pointer; border:1.5px solid var(--line); background:var(--paper); color:var(--ink-soft); transition:all .15s; }
+    .toggle-share.on { background: var(--sage-soft); border-color: var(--sage); color: var(--sage-dark); }
+
+    @keyframes rise { from { opacity:0; transform: translateY(8px);} to { opacity:1; transform:none; } }
+    .rise { animation: rise .35s ease both; }
+
+    table.audit { width: 100%; border-collapse: collapse; font-size: 13px; }
+    table.audit th, table.audit td { border: 1px solid #999; padding: 7px 9px; text-align: left; vertical-align: top; }
+    table.audit th { background: #efece4; }
+
+    @media print {
+      .no-print { display: none !important; }
+      body { background: #fff; }
+      .print-area { box-shadow: none !important; border: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel" data-presets="react">
+    const { useState, useEffect } = React;
+
+    /* =========================================================
+       設定：ここにSupabaseの情報を貼り付けてください（★3か所）
+       ========================================================= */
+    const SUPABASE_URL      = "";   // ←★ Project URL（例 https://xxxx.supabase.co）
+    const SUPABASE_ANON_KEY = "";   // ←★ anon（または publishable）キー
+    const FACILITY_NAME     = "ホップケア";
+
+    const isConfigured = SUPABASE_URL.startsWith("http") && SUPABASE_ANON_KEY.length > 20;
+    const sb = isConfigured ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+
+    /* ===================== 共通データ ===================== */
+    const RECORD_TYPES = [
+      { id: 'vital',      label: 'バイタル',     color: '#C8552F' },
+      { id: 'meal',       label: '食事・水分',   color: '#D97706' },
+      { id: 'nutrition',  label: '栄養・体重',   color: '#16A34A' },
+      { id: 'excretion',  label: '排泄',         color: '#0891B2' },
+      { id: 'sleep',      label: '睡眠',         color: '#7C3AED' },
+      { id: 'medication', label: '服薬',         color: '#0E8C6B' },
+      { id: 'bath',       label: '入浴・清拭',   color: '#2F6FB0' },
+      { id: 'incident',   label: 'ヒヤリハット', color: '#DC2626' },
+      { id: 'daily',      label: '本日のご様子', color: '#E89B45' },
+      { id: 'free',       label: '自由記録',     color: '#6B7280' },
+    ];
+    const typeOf = (id) => RECORD_TYPES.find(t => t.id === id) || RECORD_TYPES[RECORD_TYPES.length - 1];
+    const CARE_LEVELS = ['自立','要支援1','要支援2','要介護1','要介護2','要介護3','要介護4','要介護5'];
+    const GENDERS = ['男性','女性','その他'];
+    const AV_COLORS = ['#7C8B6B','#C8552F','#C99A3B','#2F6FB0','#7C5BB0','#0E8C8C','#3A9A55','#C2444F'];
+
+    /* ===================== ユーティリティ ===================== */
+    const pad = (n) => String(n).padStart(2, '0');
+    const fmtDate = (iso) => { const d = new Date(iso); return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())}`; };
+    const fmtTime = (iso) => { const d = new Date(iso); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+    const todayISODate = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; };
+    const nowHM = () => { const d = new Date(); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+    const ageFrom = (birth) => {
+      if (!birth) return '';
+      const b = new Date(birth), n = new Date();
+      let a = n.getFullYear() - b.getFullYear();
+      if (n.getMonth() < b.getMonth() || (n.getMonth() === b.getMonth() && n.getDate() < b.getDate())) a--;
+      return a;
+    };
+    const lsGet = (k, d) => { try { return localStorage.getItem(k) ?? d; } catch (e) { return d; } };
+    const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+
+    function structureRecordLocal(rawText, recordType) {
+      const text = (rawText || '').trim();
+      const fields = []; const tags = [];
+      const push = (label, value) => { if (value != null && String(value).length) fields.push({ label, value: String(value) }); };
+      const bp = text.match(/(?:血圧|BP)?\s*(\d{2,3})\s*[\/／]\s*(\d{2,3})/);
+      if (bp) { const s=+bp[1], d=+bp[2]; push('血圧', `${s}/${d} mmHg`); if (s>=140||d>=90) tags.push('血圧高め'); else if (s<100) tags.push('血圧低め'); }
+      const pulse = text.match(/(?:脈拍|脈|HR)\s*[:：]?\s*(\d{2,3})/);
+      if (pulse) push('脈拍', `${pulse[1]} 回/分`);
+      const temp = text.match(/(?:体温|BT|KT)?\s*((?:3[5-9]|4[0-2])[.．]\d)\s*(?:度|℃|°C)?/);
+      if (temp) { const t=parseFloat(temp[1].replace('．','.')); push('体温', `${t}℃`); if (t>=37.5) tags.push('発熱'); }
+      const spo2 = text.match(/(?:spo2|sao2|サチュ\S*)\s*[:：]?\s*(\d{2,3})\s*%?/i);
+      if (spo2) { const v=+spo2[1]; push('SpO2', `${v}%`); if (v<95) tags.push('SpO2低下'); }
+      const bs = text.match(/血糖\D{0,4}(\d{2,3})/);
+      if (bs) push('血糖値', `${bs[1]} mg/dL`);
+      const w = text.match(/(?:体重)\D{0,3}(\d{2,3}(?:[.．]\d)?)\s*kg/i) || text.match(/(\d{2,3}(?:[.．]\d)?)\s*kg/i);
+      if (w) push('体重', `${w[1].replace('．','.')} kg`);
+      const staple = text.match(/主食\s*(全量|完食|\d{1,2})\s*割?/);
+      if (staple) push('主食', /全量|完食/.test(staple[1]) ? '10割' : `${staple[1]}割`);
+      const side = text.match(/副食\s*(全量|完食|\d{1,2})\s*割?/);
+      if (side) push('副食', /全量|完食/.test(side[1]) ? '10割' : `${side[1]}割`);
+      const water = text.match(/水分\D{0,3}(\d{2,4})\s*(?:ml|cc|ｍｌ)/i);
+      if (water) push('水分摂取', `${water[1]} ml`);
+      if (/むせ/.test(text)) { if (/むせ(?:込み)?(?:なし|無し|無)/.test(text)) push('むせ','なし'); else { push('むせ','あり'); tags.push('むせ込みあり'); } }
+      const urine = text.match(/排尿\D{0,3}(\d)\s*回?/); if (urine) push('排尿', `${urine[1]} 回`);
+      const stool = text.match(/排便\D{0,3}(\d)\s*回?/); if (stool) push('排便', `${stool[1]} 回`);
+      const sleep = text.match(/(?:睡眠時間|睡眠)\D{0,3}(\d(?:[.．]\d)?)\s*時間/); if (sleep) push('睡眠時間', `${sleep[1].replace('．','.')} 時間`);
+      tags.unshift(typeOf(recordType).label);
+      if (recordType === 'incident' || /転倒|転落|誤嚥|ヒヤリ|ぶつけ/.test(text)) tags.push('要観察');
+      let note = '';
+      const nm = text.match(/(?:申し送り|要観察|要注意|報告|様子見|看護師|医師|Dr|ナース)[^。\n]*[。\n]?/);
+      if (nm) note = nm[0].replace(/\s+/g,' ').trim();
+      return { fields, tags: [...new Set(tags)].slice(0,5), note };
+    }
+
+    function buildCSV(resident, records) {
+      const head = ['施設','入居者氏名','日付','時刻','記録区分','内容','バイタル・項目','特記事項','記録者'];
+      const esc = (s) => '"' + String(s ?? '').replace(/"/g,'""') + '"';
+      const rows = records.map(r => {
+        const f = (r.fields || []).map(x => `${x.label}:${x.value}`).join(' / ');
+        return [resident._facility || '', resident.name, fmtDate(r.recorded_at), fmtTime(r.recorded_at), typeOf(r.record_type).label, r.content || '', f, r.note || '', r.recorder || ''].map(esc).join(',');
+      });
+      return '\uFEFF' + [head.map(esc).join(','), ...rows].join('\r\n');
+    }
+    function downloadText(filename, text, mime) {
+      const blob = new Blob([text], { type: (mime || 'text/plain') + ';charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    /* ===================== アイコン ===================== */
+    const Ic = ({ d, size=18 }) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>{d}</svg>
+    );
+    const IconPlus  = (p) => <Ic {...p} d={<><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>} />;
+    const IconBack  = (p) => <Ic {...p} d={<><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></>} />;
+    const IconDoc   = (p) => <Ic {...p} d={<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></>} />;
+    const IconUsers = (p) => <Ic {...p} d={<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></>} />;
+    const IconHeart = (p) => <Ic {...p} d={<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/>} />;
+    const IconChev  = (p) => <Ic {...p} d={<polyline points="9 18 15 12 9 6"/>} />;
+    const IconClock = (p) => <Ic {...p} d={<><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></>} />;
+    const IconPrint = (p) => <Ic {...p} d={<><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></>} />;
+    const IconLogout= (p) => <Ic {...p} d={<><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></>} />;
+
+    function Avatar({ name, size=46 }) {
+      const nm = (name || '？').trim();
+      const ch = nm[0] || '？';
+      let s = 0; for (const c of nm) s += c.charCodeAt(0);
+      const bg = AV_COLORS[s % AV_COLORS.length];
+      return <div className="font-display" style={{ width:size, height:size, borderRadius:'50%', background:bg, color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontSize:size*0.42, flexShrink:0 }}>{ch}</div>;
+    }
+    function Vitals({ fields }) {
+      if (!fields || fields.length === 0) return null;
+      return <div className="flex flex-wrap gap-2 mt-3">{fields.map((f,i) => <span key={i} className="chip">{f.label} {f.value}</span>)}</div>;
+    }
+
+    /* ===================== 設定未入力 ===================== */
+    function SetupNotice() {
+      return (
+        <div className="max-w-2xl mx-auto p-6"><div className="card p-7 rise">
+          <h1 className="font-display text-xl mb-3">セットアップが必要です</h1>
+          <p className="text-sm leading-relaxed" style={{ color:'var(--ink-soft)' }}>index.html 冒頭の <b>SUPABASE_URL</b> と <b>SUPABASE_ANON_KEY</b> に、Supabaseの値を貼り付けて再読み込みしてください（Project Settings → API）。</p>
+        </div></div>
+      );
+    }
+
+    /* ===================== ログイン ===================== */
+    function Login() {
+      const [email, setEmail] = useState(''); const [password, setPassword] = useState('');
+      const [err, setErr] = useState(null); const [loading, setLoading] = useState(false);
+      const submit = async () => {
+        setErr(null); setLoading(true);
+        const { error } = await sb.auth.signInWithPassword({ email, password });
+        if (error) setErr('ログインに失敗しました。メールアドレスとパスワードをご確認ください。');
+        setLoading(false);
+      };
+      return (
+        <div className="min-h-screen flex items-center justify-center p-6">
+          <div className="card p-8 w-full max-w-sm rise">
+            <div className="flex items-center gap-2 mb-1" style={{ color:'var(--sage-dark)' }}><IconHeart size={26}/></div>
+            <div className="font-display text-3xl">+ホップケア</div>
+            <div className="text-sm mt-1 mb-7" style={{ color:'var(--ink-soft)' }}>{FACILITY_NAME}　介護記録</div>
+            <label className="label">メールアドレス</label>
+            <input className="field mb-4" type="email" value={email} onChange={e=>setEmail(e.target.value)} />
+            <label className="label">パスワード</label>
+            <input className="field mb-5" type="password" value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={e=>{ if(e.key==='Enter') submit(); }} />
+            {err && <div className="text-sm mb-3" style={{ color:'var(--coral)' }}>{err}</div>}
+            <button className="btn btn-primary w-full" disabled={loading} onClick={submit}>{loading ? '確認中…' : 'ログイン'}</button>
+          </div>
+        </div>
+      );
+    }
+
+    /* ===================== 入居者フォーム ===================== */
+    function ResidentForm({ facilityId, onClose, onSaved }) {
+      const [f, setF] = useState({ name:'', kana:'', birthdate:'', gender:'男性', care_level:'要介護1', room:'', admission_date: todayISODate(), notes:'' });
+      const [saving, setSaving] = useState(false); const [err, setErr] = useState(null);
+      const set = (k, v) => setF(p => ({ ...p, [k]: v }));
+      const save = async () => {
+        if (!f.name.trim()) { setErr('氏名は必須です'); return; }
+        setSaving(true); setErr(null);
+        const { error } = await sb.from('residents').insert([{ ...f, facility_id: facilityId, birthdate: f.birthdate || null, admission_date: f.admission_date || null }]);
+        setSaving(false);
+        if (error) { setErr('保存に失敗しました: ' + error.message); return; }
+        onSaved();
+      };
+      return (
+        <div className="card p-6 mb-5 rise">
+          <div className="font-display text-xl mb-5">新規入居者の登録</div>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div><label className="label">氏名 *</label><input className="field" value={f.name} onChange={e=>set('name', e.target.value)} /></div>
+            <div><label className="label">ふりがな</label><input className="field" value={f.kana} onChange={e=>set('kana', e.target.value)} /></div>
+            <div><label className="label">生年月日</label><input type="date" className="field" value={f.birthdate} onChange={e=>set('birthdate', e.target.value)} /></div>
+            <div><label className="label">性別</label><select className="field" value={f.gender} onChange={e=>set('gender', e.target.value)}>{GENDERS.map(g=><option key={g}>{g}</option>)}</select></div>
+            <div><label className="label">要介護度</label><select className="field" value={f.care_level} onChange={e=>set('care_level', e.target.value)}>{CARE_LEVELS.map(c=><option key={c}>{c}</option>)}</select></div>
+            <div><label className="label">居室番号</label><input className="field" value={f.room} onChange={e=>set('room', e.target.value)} /></div>
+            <div><label className="label">入居日</label><input type="date" className="field" value={f.admission_date} onChange={e=>set('admission_date', e.target.value)} /></div>
+          </div>
+          <div className="mt-4"><label className="label">留意事項・特記</label><textarea className="field" rows="2" value={f.notes} onChange={e=>set('notes', e.target.value)} /></div>
+          {err && <div className="text-sm mt-3" style={{ color:'var(--coral)' }}>{err}</div>}
+          <div className="flex gap-2 mt-5">
+            <button className="btn btn-primary" disabled={saving} onClick={save}>{saving ? '保存中…' : '登録する'}</button>
+            <button className="btn btn-ghost" onClick={onClose}>キャンセル</button>
+          </div>
+        </div>
+      );
+    }
+
+    /* ===================== 入居者一覧 ===================== */
+    function ResidentList({ facilityId, onOpen }) {
+      const [residents, setResidents] = useState(null);
+      const [adding, setAdding] = useState(false); const [err, setErr] = useState(null);
+      const load = async () => {
+        const { data, error } = await sb.from('residents').select('*').eq('facility_id', facilityId).order('kana', { ascending: true });
+        if (error) { setErr(error.message); setResidents([]); return; }
+        setResidents(data || []);
+      };
+      useEffect(() => { setResidents(null); load(); }, [facilityId]);
+      return (
+        <div className="max-w-5xl mx-auto px-5 py-6">
+          <div className="flex items-center justify-between mb-5">
+            <h1 className="font-display text-3xl">入居者一覧</h1>
+            <button className="btn btn-primary" onClick={() => setAdding(true)}><IconPlus size={18}/>新規入居者</button>
+          </div>
+          {adding && <ResidentForm facilityId={facilityId} onClose={() => setAdding(false)} onSaved={() => { setAdding(false); load(); }} />}
+          {err && <div className="text-sm mb-3" style={{ color:'var(--coral)' }}>読み込みエラー: {err}</div>}
+          {residents === null ? <div className="text-sm" style={{color:'var(--ink-soft)'}}>読み込み中…</div>
+            : residents.length === 0 ? (
+              <div className="card p-10 text-center rise">
+                <div className="flex justify-center mb-3" style={{ color:'var(--sage)' }}><IconUsers size={40}/></div>
+                <div className="font-display text-lg mb-1">まだ入居者がいません</div>
+                <div className="text-sm" style={{color:'var(--ink-soft)'}}>右上の「＋新規入居者」から登録してください。</div>
+              </div>
+            ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 rise">
+              {residents.map(r => (
+                <button key={r.id} className="res-card" onClick={() => onOpen(r.id)}>
+                  <Avatar name={r.name} />
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div className="font-display text-lg" style={{ lineHeight:1.3 }}>{r.name}</div>
+                    <div className="text-xs" style={{ color:'var(--ink-soft)' }}>{r.kana || '\u00A0'}</div>
+                    <div className="flex items-center gap-2 mt-2 flex-wrap">
+                      {r.room && <span className="badge" style={{ background:'var(--cream-2)', color:'var(--ink)' }}>{r.room}</span>}
+                      <span className="text-sm" style={{ color:'var(--ink-soft)' }}>{ageFrom(r.birthdate) !== '' ? `${ageFrom(r.birthdate)}歳・` : ''}{r.care_level}</span>
+                    </div>
+                  </div>
+                  <span style={{ color:'var(--line)' }}><IconChev size={20}/></span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    /* ===================== 記録フォーム ===================== */
+    function RecordForm({ residentId, facilityId, onClose, onSaved }) {
+      const [date, setDate] = useState(todayISODate());
+      const [time, setTime] = useState(nowHM());
+      const [type, setType] = useState('vital');
+      const [content, setContent] = useState('');
+      const [recorder, setRecorder] = useState(lsGet('hopcare_recorder', ''));
+      const [shareFamily, setShareFamily] = useState(false);
+      const [structured, setStructured] = useState(null);
+      const [saving, setSaving] = useState(false); const [err, setErr] = useState(null);
+
+      const runStructure = () => { if (content.trim()) setStructured(structureRecordLocal(content, type)); };
+      const save = async () => {
+        if (!content.trim()) { setErr('内容を入力してください'); return; }
+        if (!recorder.trim()) { setErr('記録者名を入力してください（監査で必要です）'); return; }
+        setSaving(true); setErr(null);
+        const recorded_at = new Date(`${date}T${time}:00`).toISOString();
+        const payload = {
+          resident_id: residentId, facility_id: facilityId, recorded_at, record_type: type, content: content.trim(),
+          fields: structured ? structured.fields : [], tags: structured ? structured.tags : [typeOf(type).label],
+          note: structured ? structured.note : '', recorder: recorder.trim(), share_with_family: shareFamily,
+        };
+        const { error } = await sb.from('care_records').insert([payload]);
+        setSaving(false);
+        if (error) { setErr('保存に失敗しました: ' + error.message); return; }
+        lsSet('hopcare_recorder', recorder.trim());
+        onSaved();
+      };
+      return (
+        <div className="card p-6 mb-5 rise">
+          <div className="font-display text-xl mb-5">記録を追加</div>
+          <div className="grid sm:grid-cols-3 gap-4 mb-4">
+            <div><label className="label">日付</label><input type="date" className="field" value={date} onChange={e=>setDate(e.target.value)} /></div>
+            <div><label className="label">時刻</label><input type="time" className="field" value={time} onChange={e=>setTime(e.target.value)} /></div>
+            <div><label className="label">記録区分</label><select className="field" value={type} onChange={e=>setType(e.target.value)}>{RECORD_TYPES.map(t=><option key={t.id} value={t.id}>{t.label}</option>)}</select></div>
+          </div>
+          <label className="label">内容</label>
+          <textarea className="field" rows="3" placeholder="例：7:30 血圧142/88 体温36.8 朝食 主食8割 むせなし" value={content} onChange={e=>setContent(e.target.value)} />
+          <div className="flex items-center gap-3 mt-3 flex-wrap">
+            <button className="btn btn-ghost btn-sm" onClick={runStructure}>自動整形（任意）</button>
+            <span className="text-xs" style={{ color:'var(--ink-soft)' }}>数値や項目を自動抽出します（外部送信なし）</span>
+          </div>
+          {structured && (
+            <div className="mt-4 p-4 rounded-2xl" style={{ background:'var(--cream)' }}>
+              {structured.fields.length > 0 && <Vitals fields={structured.fields} />}
+              {structured.note && <div className="text-sm mt-3"><b>申し送り：</b>{structured.note}</div>}
+            </div>
+          )}
+          <div className="grid sm:grid-cols-2 gap-4 mt-4 items-end">
+            <div><label className="label">記録者 *</label><input className="field" value={recorder} onChange={e=>setRecorder(e.target.value)} placeholder="記録した職員名" /></div>
+            <label className="flex items-center gap-3 p-3 rounded-2xl cursor-pointer" style={{ background:'var(--sage-soft)' }}>
+              <input type="checkbox" style={{ width:20, height:20 }} checked={shareFamily} onChange={e=>setShareFamily(e.target.checked)} />
+              <span className="text-sm font-bold" style={{ color:'var(--sage-dark)' }}>この記録をご家族に共有する</span>
+            </label>
+          </div>
+          {err && <div className="text-sm mt-3" style={{ color:'var(--coral)' }}>{err}</div>}
+          <div className="flex gap-2 mt-5">
+            <button className="btn btn-primary" disabled={saving} onClick={save}>{saving ? '保存中…' : '記録を保存'}</button>
+            <button className="btn btn-ghost" onClick={onClose}>キャンセル</button>
+          </div>
+        </div>
+      );
+    }
+
+    /* ===================== 入居者ページ ===================== */
+    function ResidentPage({ residentId, onBack, onFamily }) {
+      const [resident, setResident] = useState(null);
+      const [records, setRecords] = useState(null);
+      const [adding, setAdding] = useState(false); const [err, setErr] = useState(null);
+      const load = async () => {
+        const { data: r } = await sb.from('residents').select('*').eq('id', residentId).single();
+        setResident(r);
+        const { data: recs, error } = await sb.from('care_records').select('*').eq('resident_id', residentId).order('recorded_at', { ascending: false });
+        if (error) setErr(error.message);
+        setRecords(recs || []);
+      };
+      useEffect(() => { load(); }, [residentId]);
+      const removeRecord = async (id) => { if (!window.confirm('この記録を削除しますか？')) return; await sb.from('care_records').delete().eq('id', id); load(); };
+      const toggleShare = async (rec) => { await sb.from('care_records').update({ share_with_family: !rec.share_with_family }).eq('id', rec.id); load(); };
+      if (!resident) return <div className="max-w-4xl mx-auto p-6 text-sm" style={{color:'var(--ink-soft)'}}>読み込み中…</div>;
+      return (
+        <div className="max-w-4xl mx-auto px-5 py-6">
+          <button className="btn btn-ghost btn-sm mb-4" onClick={onBack}><IconBack size={16}/>一覧へ戻る</button>
+          <div className="card p-6 mb-6 rise">
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-4">
+                <Avatar name={resident.name} size={58} />
+                <div>
+                  <div className="font-display text-2xl" style={{ lineHeight:1.25 }}>{resident.name}</div>
+                  <div className="text-sm" style={{ color:'var(--ink-soft)' }}>{resident.kana}</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {resident.room && <span className="badge" style={{ background:'var(--cream-2)', color:'var(--ink)' }}>{resident.room}</span>}
+                <button className="btn btn-ghost btn-sm" onClick={() => onFamily(residentId)}><IconHeart size={15}/>家族向け表示</button>
+              </div>
+            </div>
+            <div className="grid sm:grid-cols-4 gap-3 mt-5">
+              {[['年齢', ageFrom(resident.birthdate) !== '' ? `${ageFrom(resident.birthdate)}歳` : '—'],
+                ['性別', resident.gender || '—'],
+                ['要介護度', resident.care_level || '—'],
+                ['入居日', resident.admission_date ? fmtDate(resident.admission_date) : '—']].map(([k,v]) => (
+                <div key={k} className="p-3 rounded-2xl" style={{ background:'var(--cream)' }}>
+                  <div className="text-xs mb-1" style={{color:'var(--ink-soft)'}}>{k}</div>
+                  <div className="font-bold">{v}</div>
+                </div>
+              ))}
+            </div>
+            {resident.notes && <div className="mt-3 p-4 rounded-2xl text-sm" style={{ background:'#FBF1E8' }}><b>留意事項：</b>{resident.notes}</div>}
+          </div>
+
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-display text-xl">ケア記録</h2>
+            <button className="btn btn-primary" onClick={() => setAdding(true)}><IconPlus size={18}/>記録を追加</button>
+          </div>
+          {adding && <RecordForm residentId={residentId} facilityId={resident.facility_id} onClose={() => setAdding(false)} onSaved={() => { setAdding(false); load(); }} />}
+          {err && <div className="text-sm mb-3" style={{ color:'var(--coral)' }}>{err}</div>}
+          {records === null ? <div className="text-sm" style={{color:'var(--ink-soft)'}}>読み込み中…</div>
+            : records.length === 0 ? (
+              <div className="card p-8 text-center">
+                <div className="flex justify-center mb-2" style={{color:'var(--sage)'}}><IconClock size={32}/></div>
+                <div className="text-sm" style={{color:'var(--ink-soft)'}}>まだ記録がありません。「＋記録を追加」から始めましょう。</div>
+              </div>
+            ) : (
+            <div className="flex flex-col gap-3 rise">
+              {records.map(r => { const t = typeOf(r.record_type); return (
+                <div key={r.id} className="rec-card" style={{ borderLeftColor: t.color }}>
+                  <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
+                    <div className="flex items-center gap-3">
+                      <span className="badge" style={{ background:t.color, color:'#fff' }}>{t.label}</span>
+                      <span className="font-display flex items-center gap-1" style={{ fontSize:'17px' }}><IconClock size={15}/>{fmtTime(r.recorded_at)}</span>
+                      <span className="text-sm" style={{ color:'var(--ink-soft)' }}>{fmtDate(r.recorded_at)}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button className={"toggle-share" + (r.share_with_family ? " on" : "")} onClick={() => toggleShare(r)}>
+                        <IconHeart size={13}/>{r.share_with_family ? '家族に共有中' : '家族に共有'}
+                      </button>
+                      <button className="btn btn-ghost btn-sm" style={{ minHeight:34, color:'var(--ink-soft)' }} onClick={() => removeRecord(r.id)}>削除</button>
+                    </div>
+                  </div>
+                  <div className="whitespace-pre-wrap" style={{ marginTop:6 }}>{r.content}</div>
+                  <Vitals fields={r.fields} />
+                  {r.note && <div className="text-sm mt-2 p-2 rounded-xl" style={{ background:'#FBF1E8' }}><b>申し送り：</b>{r.note}</div>}
+                  <div className="text-xs mt-3" style={{ color:'var(--ink-soft)' }}>記録者：{r.recorder || '—'}</div>
+                </div>
+              ); })}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    /* ===================== 家族向け表示 ===================== */
+    function FamilyView({ residentId, facilityName, onBack }) {
+      const [resident, setResident] = useState(null);
+      const [records, setRecords] = useState(null);
+      useEffect(() => { (async () => {
+        const { data: r } = await sb.from('residents').select('*').eq('id', residentId).single();
+        setResident(r);
+        const { data: recs } = await sb.from('care_records').select('*').eq('resident_id', residentId).eq('share_with_family', true).order('recorded_at', { ascending: false });
+        setRecords(recs || []);
+      })(); }, [residentId]);
+      if (!resident) return <div className="max-w-3xl mx-auto p-6 text-sm" style={{color:'var(--ink-soft)'}}>読み込み中…</div>;
+      return (
+        <div className="max-w-3xl mx-auto px-5 py-6">
+          <div className="flex items-center gap-2 mb-4 no-print">
+            <button className="btn btn-ghost btn-sm" onClick={onBack}><IconBack size={16}/>記録に戻る</button>
+            <button className="btn btn-ghost btn-sm" onClick={() => window.print()}><IconPrint size={15}/>印刷 / PDF保存</button>
+          </div>
+          <div className="card p-8 print-area rise">
+            <div className="text-center mb-6">
+              <div className="flex items-center justify-center" style={{ color:'var(--coral)' }}><IconHeart size={26}/></div>
+              <div className="font-display text-2xl mt-2">{resident.name} 様の生活のようす</div>
+              <div className="text-sm mt-2" style={{ color:'var(--ink-soft)' }}>{facilityName || ''}　{fmtDate(new Date().toISOString())} 時点</div>
+            </div>
+            <p className="leading-relaxed mb-6" style={{ color:'var(--ink-soft)' }}>
+              いつも{resident.name}様を見守ってくださり、ありがとうございます。施設での最近のご様子をお届けします。
+            </p>
+            {records === null ? <div className="text-sm" style={{color:'var(--ink-soft)'}}>読み込み中…</div>
+              : records.length === 0 ? <div className="text-center text-sm py-8" style={{color:'var(--ink-soft)'}}>現在、ご家族向けに共有されている記録はありません。</div>
+              : (
+              <div className="flex flex-col gap-3">
+                {records.map(r => { const t = typeOf(r.record_type); return (
+                  <div key={r.id} className="p-5 rounded-2xl" style={{ background:'var(--cream)', borderLeft:`6px solid ${t.color}` }}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="badge" style={{ background:t.color, color:'#fff' }}>{t.label}</span>
+                      <span className="font-display" style={{ fontSize:'16px' }}>{fmtDate(r.recorded_at)}</span>
+                    </div>
+                    <div className="whitespace-pre-wrap">{r.content}</div>
+                    <Vitals fields={r.fields} />
+                  </div>
+                ); })}
+              </div>
+            )}
+            <div className="text-xs text-center mt-7" style={{ color:'var(--ink-soft)' }}>※ ご不明な点は施設職員までお気軽にお声がけください。</div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ===================== 監査用 出力 ===================== */
+    function AuditExport({ facilityId, facilityName }) {
+      const [residents, setResidents] = useState([]);
+      const [rid, setRid] = useState('');
+      const [from, setFrom] = useState(() => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-01`; });
+      const [to, setTo] = useState(todayISODate());
+      const [doc, setDoc] = useState(null); const [loading, setLoading] = useState(false);
+      useEffect(() => { (async () => {
+        const { data } = await sb.from('residents').select('id,name,kana').eq('facility_id', facilityId).order('kana');
+        setResidents(data || []); setRid(data && data[0] ? data[0].id : '');
+      })(); }, [facilityId]);
+      const generate = async () => {
+        if (!rid) return; setLoading(true);
+        const { data: full } = await sb.from('residents').select('*').eq('id', rid).single();
+        const fromISO = new Date(`${from}T00:00:00`).toISOString();
+        const toISO = new Date(`${to}T23:59:59`).toISOString();
+        const { data: recs } = await sb.from('care_records').select('*').eq('resident_id', rid).gte('recorded_at', fromISO).lte('recorded_at', toISO).order('recorded_at', { ascending: true });
+        setDoc({ resident: { ...full, _facility: facilityName }, records: recs || [], from, to });
+        setLoading(false);
+      };
+      const csv = () => { if (!doc) return; downloadText(`介護記録_${doc.resident.name}_${doc.from}_${doc.to}.csv`, buildCSV(doc.resident, doc.records), 'text/csv'); };
+      return (
+        <div className="max-w-4xl mx-auto px-5 py-6">
+          <h1 className="font-display text-3xl mb-5 no-print">監査用 記録出力</h1>
+          <div className="card p-6 mb-5 no-print rise">
+            <div className="grid sm:grid-cols-4 gap-4">
+              <div className="sm:col-span-2"><label className="label">入居者</label>
+                <select className="field" value={rid} onChange={e=>setRid(e.target.value)}>{residents.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}</select></div>
+              <div><label className="label">期間（開始）</label><input type="date" className="field" value={from} onChange={e=>setFrom(e.target.value)} /></div>
+              <div><label className="label">期間（終了）</label><input type="date" className="field" value={to} onChange={e=>setTo(e.target.value)} /></div>
+            </div>
+            <div className="flex gap-2 mt-5 flex-wrap">
+              <button className="btn btn-primary" disabled={loading} onClick={generate}>{loading ? '作成中…' : '記録を表示'}</button>
+              {doc && <button className="btn btn-ghost" onClick={() => window.print()}><IconPrint size={16}/>印刷 / PDF保存</button>}
+              {doc && <button className="btn btn-ghost" onClick={csv}>CSVダウンロード</button>}
+            </div>
+          </div>
+          {doc && (
+            <div className="card p-7 print-area">
+              <div className="text-center mb-4">
+                <div className="font-display text-xl">介護記録（ケア記録）</div>
+                <div className="text-sm" style={{ color:'var(--ink-soft)' }}>{facilityName || FACILITY_NAME}</div>
+              </div>
+              <table className="audit mb-4"><tbody>
+                <tr><th style={{width:'18%'}}>入居者氏名</th><td>{doc.resident.name}（{doc.resident.kana}）</td><th style={{width:'18%'}}>要介護度</th><td>{doc.resident.care_level || '—'}</td></tr>
+                <tr><th>生年月日</th><td>{doc.resident.birthdate ? `${fmtDate(doc.resident.birthdate)}（${ageFrom(doc.resident.birthdate)}歳）` : '—'}</td><th>居室</th><td>{doc.resident.room || '—'}</td></tr>
+                <tr><th>対象期間</th><td>{doc.from} 〜 {doc.to}</td><th>出力日</th><td>{fmtDate(new Date().toISOString())}</td></tr>
+              </tbody></table>
+              <table className="audit">
+                <thead><tr><th style={{width:'12%'}}>日付</th><th style={{width:'7%'}}>時刻</th><th style={{width:'12%'}}>区分</th><th>内容・バイタル等</th><th style={{width:'14%'}}>記録者</th></tr></thead>
+                <tbody>
+                  {doc.records.length === 0 ? <tr><td colSpan="5" style={{textAlign:'center'}}>対象期間の記録はありません</td></tr>
+                  : doc.records.map(r => (
+                    <tr key={r.id}>
+                      <td>{fmtDate(r.recorded_at)}</td><td>{fmtTime(r.recorded_at)}</td><td>{typeOf(r.record_type).label}</td>
+                      <td>{r.content}
+                        {r.fields && r.fields.length > 0 && <div style={{ color:'#555' }}>［{r.fields.map(f=>`${f.label} ${f.value}`).join('、')}］</div>}
+                        {r.note && <div>※申し送り：{r.note}</div>}
+                      </td>
+                      <td>{r.recorder || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="text-xs mt-3" style={{ color:'var(--ink-soft)' }}>総記録件数：{doc.records.length}件</div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    /* ===================== アプリ本体 ===================== */
+    function App() {
+      const [session, setSession] = useState(undefined);
+      const [facilities, setFacilities] = useState(null);
+      const [facilityId, setFacilityId] = useState(null);
+      const [view, setView] = useState('list');
+      const [rid, setRid] = useState(null);
+
+      useEffect(() => {
+        sb.auth.getSession().then(({ data }) => setSession(data.session));
+        const { data: sub } = sb.auth.onAuthStateChange((_e, s) => setSession(s));
+        return () => sub.subscription.unsubscribe();
+      }, []);
+
+      useEffect(() => {
+        if (!session) { setFacilities(null); return; }
+        (async () => {
+          const { data } = await sb.from('facility_members').select('facilities(id,code,name)');
+          const list = (data || []).map(r => r.facilities).filter(Boolean).sort((a,b)=> (a.code||'').localeCompare(b.code||''));
+          setFacilities(list);
+          setFacilityId(list[0] ? list[0].id : null);
+        })();
+      }, [session]);
+
+      if (session === undefined) return <div className="p-10 text-center text-sm" style={{color:'var(--ink-soft)'}}>読み込み中…</div>;
+      if (!session) return <Login />;
+      if (facilities === null) return <div className="p-10 text-center text-sm" style={{color:'var(--ink-soft)'}}>施設情報を読み込み中…</div>;
+      if (facilities.length === 0) return (
+        <div className="min-h-screen flex items-center justify-center p-6"><div className="card p-8 max-w-sm text-center rise">
+          <div className="font-display text-lg mb-2">施設が割り当てられていません</div>
+          <p className="text-sm mb-5" style={{color:'var(--ink-soft)'}}>このアカウントはまだ施設に紐付けられていません。管理者にお問い合わせください。</p>
+          <button className="btn btn-ghost" onClick={() => sb.auth.signOut()}><IconLogout size={16}/>ログアウト</button>
+        </div></div>
+      );
+
+      const current = facilities.find(f => f.id === facilityId) || facilities[0];
+      const onResidentTab = (view==='list'||view==='resident'||view==='family');
+      return (
+        <div className="min-h-screen">
+          <header className="no-print" style={{ background:'rgba(255,255,255,.85)', backdropFilter:'blur(8px)', borderBottom:'1px solid var(--line)', position:'sticky', top:0, zIndex:10 }}>
+            <div className="max-w-5xl mx-auto px-5 py-3 flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-3">
+                <div className="font-display text-xl flex items-center gap-1" style={{ color:'var(--sage-dark)' }}><IconHeart size={18}/>+ホップケア</div>
+                {facilities.length > 1
+                  ? <select className="field" style={{ width:'auto', minHeight:38, padding:'6px 10px', fontSize:'13px', fontWeight:700 }} value={facilityId} onChange={e=>{ setFacilityId(e.target.value); setView('list'); }}>
+                      {facilities.map(f => <option key={f.id} value={f.id}>{f.code}｜{f.name}</option>)}
+                    </select>
+                  : <span className="badge" style={{ background:'var(--cream-2)', color:'var(--ink-soft)' }}>{current.code}｜{current.name}</span>}
+              </div>
+              <div className="flex items-center gap-1">
+                <button className={"nav-tab" + (onResidentTab ? " active" : "")} onClick={() => setView('list')}><IconUsers size={16}/>入居者</button>
+                <button className={"nav-tab" + (view==='audit' ? " active" : "")} onClick={() => setView('audit')}><IconDoc size={16}/>監査出力</button>
+                <button className="nav-tab" onClick={() => sb.auth.signOut()}><IconLogout size={16}/>ログアウト</button>
+              </div>
+            </div>
+          </header>
+          <main>
+            {view === 'list' && <ResidentList facilityId={facilityId} onOpen={(id) => { setRid(id); setView('resident'); }} />}
+            {view === 'resident' && rid && <ResidentPage residentId={rid} onBack={() => setView('list')} onFamily={(id) => { setRid(id); setView('family'); }} />}
+            {view === 'family' && rid && <FamilyView residentId={rid} facilityName={current.name} onBack={() => setView('resident')} />}
+            {view === 'audit' && <AuditExport facilityId={facilityId} facilityName={current.name} />}
+          </main>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(isConfigured ? <App /> : <SetupNotice />);
+  </script>
+</body>
+</html>
